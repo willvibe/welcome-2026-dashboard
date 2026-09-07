@@ -1,0 +1,92 @@
+export type Group = {
+  name: string;
+  total: number;
+  checkedIn: number;
+  rate: number;
+};
+export type Word = { name: string; value: number };
+export type Portrait = {
+  name: string;
+  total: number;
+  gender: { male: number; female: number; unknown: number };
+  zodiacs: Word[];
+};
+export type Arrival = {
+  id: string;
+  name: string;
+  major: string;
+  className: string;
+  city: string | null;
+  ordinal: number;
+  checkedInAt: string;
+};
+export type City = {
+  name: string;
+  province: string | null;
+  districts: { name: string; total: number; checkedIn: number }[];
+  total: number;
+  checkedIn: number;
+  schools: { name: string; total: number; checkedIn: number }[];
+};
+export type CardDetail = {
+  student: Arrival & { zodiac: string | null };
+  sameCity: number | null;
+  sameSchool: number | null;
+  sameHobby: number;
+  sharedHobbies: string[];
+  sameZodiac: number | null;
+  sameLastChar: number | null;
+  sameBirthday: number | null;
+  message: string;
+};
+export type Student = {
+  id: string;
+  province: string | null;
+  geographySource?: string;
+  name: string;
+  major: string;
+  className: string;
+  gender: string | null;
+  city: string | null;
+  district: string | null;
+  school: string | null;
+  zodiac: string | null;
+  hobbies: string[];
+  ordinal: number | null;
+  checkedInAt: string | null;
+  status: 'pending' | 'checked_in' | 'leave' | 'withdrawn';
+};
+export type Stats = {
+  total: number;
+  checkedIn: number;
+  pending: number;
+  leave?: number;
+  withdrawn?: number;
+  rate: number;
+  today: number;
+  lastHour: number;
+  portraits: Portrait[];
+  recent: Arrival[];
+  majors: Group[];
+  classes: Group[];
+  cities: City[];
+  zodiacs: Word[];
+  nameWords: Word[];
+  hobbyWords: Word[];
+  hobbyEstimate: { population: number; sampleSize: number; words: Word[]; radar: Word[] };
+  quality: {
+    cityKnown: number;
+    shandong: number;
+    outsideShandong: number;
+    cityMissing: number;
+    birthKnown: number;
+    hobbiesKnown: number;
+    matchedAdmissions: number;
+    [key: string]: unknown;
+  };
+  hourly: { hour: string; count: number }[];
+  trendStep?: number;
+  photo: Arrival | null;
+  photoKey?: string | null;
+  updatedAt: string | null;
+};

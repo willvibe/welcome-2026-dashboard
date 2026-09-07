@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vinext/
+
+# secrets - database & admin credentials
+.env
+
+# student privacy data (450 roster, admission sheets, ID-derived geography)
+welcome-screen/data/
+*.xlsx
+
+# teacher account credentials
+*.txt
+
+# logs & os
+*.log
+.DS_Store
+Thumbs.db
