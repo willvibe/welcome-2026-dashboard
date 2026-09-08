@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
+  Camera,
   CircleHelp,
   Maximize,
   Minimize,
@@ -527,6 +528,13 @@ export default function Dashboard() {
           <button onClick={() => setHelp(true)} aria-label="数据说明">
             <CircleHelp size={14} />
           </button>
+          <a
+            href="/card"
+            aria-label="我的合影卡"
+            title="我的合影卡 · 学生查询"
+          >
+            <Camera size={14} />
+          </a>
           <a
             href="/admin"
             target="_blank"

@@ -189,12 +189,16 @@ svg {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* safe center: center when it fits, fall back to top alignment when the
+     card overflows small viewports, so the college line is never clipped. */
   justify-content: center;
+  justify-content: safe center;
   background:
     radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
     radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
   text-align: center;
-  padding: 48px;
+  /* Bottom padding keeps scrolling content clear of the fixed bottom bar. */
+  padding: 48px 48px clamp(60px, 8vh, 110px);
   isolation: isolate;
 }
 .photo-close {
@@ -205,8 +209,10 @@ svg {
   padding: 10px;
 }
 .photo-college {
-  position: absolute;
-  top: 5%;
+  /* In-flow (not absolute) so it always sits above the eyebrow, even when
+     the card content overflows small viewports and clipping eats margins. */
+  position: static;
+  margin: 0 0 clamp(24px, 4vh, 54px);
   font-size: clamp(18px, 1.6vw, 26px);
   letter-spacing: 6px;
   color: #a7c8dd;
@@ -214,7 +220,7 @@ svg {
 .photo-mode .eyebrow {
   font-size: clamp(13px, 1.1vw, 18px);
   letter-spacing: 8px;
-  margin-top: 46px;
+  margin-top: 0;
 }
 .photo-mode h1 {
   font-size: clamp(34px, 5.4vw, 96px);
@@ -972,6 +978,100 @@ svg {
   background: #0c2437c9;
   padding: 38px;
   box-shadow: 0 25px 100px #0003;
+}
+/* Student card lookup: share the login look, add an id input and save bar. */
+.card-lookup-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 25% 15%, #0e3958 0, transparent 55%),
+    radial-gradient(ellipse at 95% 80%, #1c345233, transparent 60%), #071623;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+}
+.card-lookup-box {
+  width: 440px;
+  border: 1px solid #2a526b;
+  border-radius: 12px;
+  background: #0c2437c9;
+  padding: 38px;
+  box-shadow: 0 25px 100px #0003;
+}
+.card-lookup-box h1 {
+  font-size: 21px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 1px;
+}
+.card-lookup-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.card-lookup-head .login-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+.card-lookup-sub {
+  color: #7295aa;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+.card-lookup-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  color: #a6c4d6;
+  margin-bottom: 14px;
+}
+.card-lookup-help {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: -8px 0 18px;
+  color: #628aa0;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.card-id-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #6fa5c0;
+}
+.card-id-input input {
+  flex: 1;
+  font-size: 18px;
+  letter-spacing: 2px;
+  padding: 13px 14px 13px 40px;
+}
+.card-save-actions {
+  position: fixed;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50; /* above the photo-mode overlay (z-index 45) */
+  display: flex;
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .card-lookup-box {
+    padding: 28px;
+    width: 100%;
+  }
+  .card-save-actions {
+    bottom: 16px;
+    flex-direction: column;
+    width: calc(100% - 40px);
+  }
 }
 .login-logo {
   width: 64px;

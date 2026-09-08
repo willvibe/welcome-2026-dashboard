@@ -173,9 +173,30 @@ app.get('/api/arrivals', async (req, res) => {
 // Commemorative card is public like the screen itself, but only for students
 // who have actually checked in (same eligibility as the photo push).
 app.get('/api/card/:id', async (req, res) => {
-  if (!/^\d{2}-\d{3}$/.test(req.params.id))
-    return res.status(400).json({ error: '无效的名册编号' });
-  const card = await buildCard(req.params.id);
+  let id = req.params.id;
+  if (/^\d{11}$/.test(id)) {
+    // Students query by their 11-digit student number from the roster sheet.
+    const [[row]] = await pool
+      .execute('SELECT id FROM students WHERE student_no=?', [id])
+      .catch(() => [[]]);
+    if (!row)
+      return res.status(404).json({ error: '未找到该学号，请核对后重试' });
+    id = row.id;
+  } else if (/^\d{17}[\dX]$/i.test(id)) {
+    // Or by their 18-digit ID card number; it is never echoed back.
+    const [[row]] = await pool
+      .execute('SELECT id FROM students WHERE id_card=?', [id.toUpperCase()])
+      .catch(() => [[]]);
+    if (!row)
+      return res
+        .status(404)
+        .json({ error: '未找到该身份证号，请核对后重试' });
+    id = row.id;
+  } else if (!/^\d{2}-\d{3}$/.test(id))
+    return res
+      .status(400)
+      .json({ error: '请输入学号（11 位）或身份证号（18 位）' });
+  const card = await buildCard(id);
   if (card.student.checkedInAt === null || card.student.ordinal === null)
     return res.status(409).json({ error: '该学生尚未报到' });
   res.json(card);
@@ -348,9 +369,12 @@ app.get('/api/export', auth, async (req, res) => {
     if (s.status === 'checked_in')
       statusCell.font = { color: { argb: 'FF1A7F37' }, bold: true };
   }
-  const scopeName = req.teacherMajor || (typeof major === 'string' && major) || '全院';
+  // The filename mirrors the active filters, e.g. 报到详情_大数据技术1班_已报到_20260907.
+  const parts = [req.teacherMajor || (typeof major === 'string' && major) || '全院'];
+  if (typeof className === 'string' && className) parts.push(className);
+  if (typeof status === 'string' && STATUS_TEXT[status]) parts.push(STATUS_TEXT[status]);
   const stamp = sqlTime().slice(0, 10).replace(/-/g, '');
-  const filename = `2026级新生报到详情_${scopeName}_${stamp}.xlsx`;
+  const filename = `2026级新生报到详情_${parts.join('_')}_${stamp}.xlsx`;
   const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
   res.set({
     'Content-Type':

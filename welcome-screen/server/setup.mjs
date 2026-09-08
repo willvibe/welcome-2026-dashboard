@@ -24,6 +24,7 @@ const schema = [
   `CREATE TABLE IF NOT EXISTS students (
  id VARCHAR(20) PRIMARY KEY, name VARCHAR(80) NOT NULL, major VARCHAR(80) NOT NULL, class_name VARCHAR(120) NOT NULL,
  gender VARCHAR(10), birthday DATE, zodiac VARCHAR(20), hobbies JSON NOT NULL, hobbies_raw TEXT, last_character VARCHAR(8),
+ student_no VARCHAR(20) UNIQUE, id_card CHAR(18),
  city VARCHAR(80), district VARCHAR(80), school VARCHAR(180), source_sheet VARCHAR(80), source_row INT,
  status ENUM('pending','checked_in','leave','withdrawn') NOT NULL DEFAULT 'pending', ordinal INT UNSIGNED UNIQUE,
  checked_in_at DATETIME(3), updated_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
@@ -42,6 +43,53 @@ const schema = [
 ) ENGINE=InnoDB`,
 ];
 for (const sql of schema) await pool.query(sql);
+// Widen pre-existing tables (idempotent): student number + ID card for lookup.
+await pool
+  .query('ALTER TABLE students ADD COLUMN student_no VARCHAR(20) UNIQUE')
+  .catch((e) => {
+    // 1060 = duplicate column: the column already exists.
+    if (e.errno !== 1060 && e.code !== 'ER_DUP_FIELDNAME') throw e;
+  });
+await pool
+  .query('ALTER TABLE students ADD COLUMN id_card CHAR(18)')
+  .catch((e) => {
+    if (e.errno !== 1060 && e.code !== 'ER_DUP_FIELDNAME') throw e;
+  });
+// Import student numbers and ID cards from the ID spreadsheet, name + class keyed.
+try {
+  const XLSX = await import('xlsx/xlsx.mjs');
+  const buf = await readFile(new URL('../../学生身份证信息.xlsx', import.meta.url));
+  const sheet = XLSX.read(buf).Sheets.Sheet1;
+  const roster = XLSX.utils.sheet_to_json(sheet);
+  let matchedNo = 0,
+    matchedCard = 0;
+  for (const row of roster) {
+    const no = String(row['学号'] ?? '').trim();
+    const card = String(row['证件号码'] ?? '').trim().toUpperCase();
+    const name = String(row['姓名'] ?? '').trim();
+    const cls = String(row['班级'] ?? '').trim();
+    if (!name || !cls) continue;
+    if (no) {
+      const [result] = await pool.execute(
+        'UPDATE students SET student_no=? WHERE name=? AND class_name=?',
+        [no, name, cls],
+      );
+      matchedNo += result.affectedRows;
+    }
+    if (/^\d{17}[\dX]$/.test(card)) {
+      const [result] = await pool.execute(
+        'UPDATE students SET id_card=? WHERE name=? AND class_name=?',
+        [card, name, cls],
+      );
+      matchedCard += result.affectedRows;
+    }
+  }
+  console.log(
+    `学号导入：${matchedNo}/${roster.length}，身份证导入：${matchedCard}/${roster.length}`,
+  );
+} catch {
+  console.log('未找到 学生身份证信息.xlsx，跳过学号/身份证导入');
+}
 await pool.execute(
   "INSERT IGNORE INTO counters (name,value) VALUES ('registration',0)",
 );

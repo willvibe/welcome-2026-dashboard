@@ -445,7 +445,17 @@ export default function TeacherDesk() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `2026级新生报到详情_${scope ? shortClass(scope) : '全院'}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
+      // Mirror the active filters in the filename, same as the server does.
+      const parts = [scope ? shortClass(scope) : major === 'all' ? '全院' : major];
+      if (className !== 'all') parts.push(shortClass(className));
+      const statusText: Record<string, string> = {
+        pending: '待报到',
+        checked_in: '已报到',
+        leave: '请假',
+        withdrawn: '退学',
+      };
+      if (status !== 'all') parts.push(statusText[status]);
+      link.download = `2026级新生报到详情_${parts.join('_')}_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
