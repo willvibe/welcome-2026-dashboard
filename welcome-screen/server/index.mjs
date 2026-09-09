@@ -316,6 +316,7 @@ app.get('/api/export', auth, async (req, res) => {
   });
   const HEADERS = [
     ['名册编号', 10],
+    ['学号', 14],
     ['姓名', 10],
     ['性别', 6],
     ['专业', 18],
@@ -349,6 +350,7 @@ app.get('/api/export', auth, async (req, res) => {
   for (const s of rows) {
     const row = sheet.addRow([
       s.id,
+      s.student_no || '',
       s.name,
       s.gender || '',
       s.major,
@@ -363,7 +365,7 @@ app.get('/api/export', auth, async (req, res) => {
       s.ordinal ?? '',
       s.checked_in_at ? String(s.checked_in_at).slice(0, 16) : '',
     ]);
-    const statusCell = row.getCell(12);
+    const statusCell = row.getCell(13);
     const fill = STATUS_FILL[s.status];
     if (fill) statusCell.fill = fill;
     if (s.status === 'checked_in')

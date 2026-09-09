@@ -1,7 +1,10 @@
 .arrival-screen {
   --a-bg: #0a0c10;
-  --a-panel: #11151b;
+  --a-panel: #0d223399;
   --a-line: #ffffff0c;
+  /* Var-wrapped blur: the CSS minifier prefixes literal backdrop-filter
+     values with -webkit-, which Chromium ignores — vars pass through. */
+  --a-blur: blur(14px);
   --a-text: #e8edf6;
   --a-muted: #838d9f;
   --a-dim: #596373;
@@ -14,8 +17,8 @@
   overflow: hidden;
   color: var(--a-text);
   background:
-    radial-gradient(ellipse at 50% -30%, #26324735, transparent 65%),
-    var(--a-bg);
+    radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
+    radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
   font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -23,8 +26,6 @@
   font-family: inherit;
 }
 .a-brand { gap: 10px; }
-.a-brand-name { color: #e8edf6; font-size: clamp(14px, 1.06vw, 21px); font-weight: 650; letter-spacing: .04em; white-space: nowrap; }
-.a-brand-name small { display: block; margin-top: 6px; font-size: clamp(6px, .43vw, 9px); letter-spacing: .12em; color: #596373; font-weight: 400; }
 .arrival-screen button:focus-visible,
 .arrival-screen a:focus-visible,
 .arrival-screen [tabindex]:focus-visible {
@@ -51,13 +52,12 @@
 }
 .a-brand-symbol {
   display: block;
-  width: 68px;
-  height: 47px;
+  height: clamp(44px, 4.4vh, 54px);
   overflow: hidden;
   flex-shrink: 0;
 }
 .a-brand-symbol img {
-  height: 47px;
+  height: 100%;
   width: auto;
   max-width: none;
   filter: saturate(1.12);
@@ -202,15 +202,23 @@
   grid-template-rows: 1fr 1.24fr 1fr;
 }
 .a-center {
+  /* Third row (arrival roster + QR) is taller so the QR code can render
+     larger; the map row (1fr) absorbs the difference. */
   grid-template-rows: clamp(104px, 11.1vh, 124px) minmax(0, 1fr) clamp(
-      215px,
-      23.4vh,
-      263px
+      250px,
+      29vh,
+      322px
     );
 }
 .a-panel {
-  border: 1px solid var(--a-line);
+  /* Floating frosted-glass tile: translucent fill + blurred backdrop,
+     lit border and a soft drop shadow to lift it off the page. */
+  border: 1px solid #56cde326;
   background: var(--a-panel);
+  backdrop-filter: var(--a-blur);
+  box-shadow:
+    0 12px 34px rgba(2, 12, 24, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
   border-radius: 9px;
   min-width: 0;
   min-height: 0;
@@ -521,14 +529,18 @@
   border: 1px solid #a1b2d01a;
   border-radius: 8px;
   padding: 14px 19px 11px;
-  background: #141922;
+  background: rgba(20, 25, 34, 0.45);
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 .a-metrics > article:last-child {
-  background: linear-gradient(125deg, #222b3d, #171d2a);
+  background: linear-gradient(
+    125deg,
+    rgba(34, 43, 61, 0.55),
+    rgba(23, 29, 42, 0.5)
+  );
   border-color: #92b1e524;
 }
 .a-metric-label {
@@ -609,8 +621,8 @@
   --map-inset: clamp(15px, 1.15vw, 24px);
   --map-card-padding: 15px;
   position: relative;
-  background:
-    radial-gradient(ellipse at 59% 52%, #202a3c50, transparent 65%), #10141b;
+  /* Translucent ambience only — the frosted .a-panel base shows through. */
+  background: radial-gradient(ellipse at 59% 52%, #202a3c50, transparent 65%);
 }
 .a-map-panel .a-panel-header {
   padding-bottom: 5px;
@@ -665,12 +677,15 @@
   flex-direction: column;
   min-height: 0;
   width: clamp(168px, 12.6vw, 245px);
-  border: 1px solid #a1b2d01a;
+  /* Same frosted-glass look as the other dashboard panels. */
+  border: 1px solid #56cde326;
   border-radius: 7px;
   padding: 14px var(--map-card-padding) 9px;
-  background: #111722e8;
-  box-shadow: 0 8px 35px #00000015;
-  backdrop-filter: blur(12px);
+  background: rgba(13, 34, 51, 0.6);
+  box-shadow:
+    0 12px 34px rgba(2, 12, 24, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: var(--a-blur);
 }
 .a-hometown-card > header {
   flex-shrink: 0;
@@ -899,17 +914,14 @@
 }
 .a-arrival-head {
   display: grid;
-  grid-template-columns: 1.1fr 1.3fr 0.75fr 0.85fr;
-  gap: 8px;
-  margin: 8px 21px 0;
+  /* Fixed compact tracks, left-packed; matches .a-arrival-entry below. */
+  grid-template-columns: 56px 92px 40px 48px;
+  gap: 12px;
+  margin: 3px 21px 0;
   padding: 0 0 6px;
   font-size: 9px;
   color: #536581;
   border-bottom: 1px solid #92abcc0a;
-}
-.a-arrival-head > span:nth-child(3),
-.a-arrival-head > span:last-child {
-  text-align: center;
 }
 .a-arrivals-window {
   flex: 1;
@@ -920,11 +932,58 @@
 .a-arrivals-panel {
   container-type: inline-size;
 }
+/* Compact roster on the left (fills all spare width), QR code pinned to
+   the panel's right edge. */
+.a-arrivals-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+  padding-top: 3px;
+}
+.a-arrivals-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.a-arrival-qr {
+  /* Fixed basis (not the image's natural 613px max-content, which would
+     swallow the panel width); the panel is an inline-size container. */
+  flex: 0 0 auto;
+  width: clamp(150px, 22cqw, 235px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 4px 0;
+  min-width: 0;
+}
+.a-qr-img {
+  flex: 1;
+  min-height: 0;
+}
+.a-qr-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+}
+.a-arrival-qr > span {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #758dab;
+  white-space: nowrap;
+  text-align: center;
+}
 .a-arrivals-list {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-auto-rows: 20%;
+  /* Row height tracks the panel's clamped row (29vh formula minus the
+     panel header/list head/actions overhead) ÷5, so the latest five fill
+     the list exactly; percentage tracks resolve oddly inside this nested
+     flex/grid, hence the calc. Older history overflows — scroll to view. */
+  grid-auto-rows: calc((clamp(250px, 29vh, 322px) - 123px) / 5);
   align-content: start;
   padding: 0 21px;
   overflow-y: auto;
@@ -942,7 +1001,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 6px 16px 10px;
+  margin: 3px 16px 6px;
   flex-shrink: 0;
 }
 .a-history-link,
@@ -962,12 +1021,13 @@
 }
 .a-arrival-entry {
   display: grid;
-  grid-template-columns: 1.1fr 1.3fr 0.75fr 0.85fr;
-  gap: 8px;
+  grid-template-columns: 56px 92px 40px 48px;
+  gap: 12px;
   align-items: center;
   flex: 1;
   min-height: 0;
-  padding: 3px 0;
+  padding: 2px 0;
+  overflow: hidden;
   text-align: left;
   background: transparent;
   border-bottom: 1px solid #92abcc09;
@@ -996,13 +1056,11 @@
     sans-serif;
   font-weight: 400;
   color: #8fb4e8;
-  text-align: center;
   white-space: nowrap;
 }
 .a-ar-city {
   color: #7b90b0;
   font-size: 10px;
-  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1467,7 +1525,8 @@
   align-items: center;
   gap: 20px;
   padding: 12px 20px;
-  background: #252f40;
+  background: rgba(37, 47, 64, 0.72);
+  backdrop-filter: var(--a-blur);
   color: #c1cfe4;
   border: 1px solid #627b9f45;
   border-radius: 6px;
@@ -1798,8 +1857,12 @@
   }
   .a-arrival-entry,
   .a-arrival-head {
-    grid-template-columns: 1fr 1.25fr 52px 42px;
-    gap: 5px;
+    grid-template-columns: 52px 82px 36px 42px;
+    gap: 8px;
+  }
+  /* Too narrow to sit side by side — the roster takes the full width. */
+  .a-arrival-qr {
+    display: none;
   }
   .a-ar-class {
     font-size: 8px;
@@ -1842,7 +1905,7 @@
   }
   .a-brand-symbol {
     height: 34px;
-    width: 36px;
+    width: auto;
   }
   .a-brand-symbol img {
     height: 34px;
@@ -2041,8 +2104,15 @@
   }
   .a-arrival-head,
   .a-arrival-entry {
-    grid-template-columns: 1fr 1.3fr 60px 42px;
+    grid-template-columns: 42px 72px 32px 38px;
     gap: 6px;
+  }
+  /* No room for the QR side panel on phones — the roster takes the width. */
+  .a-arrival-qr {
+    display: none;
+  }
+  .a-arrivals-layout {
+    padding-top: 0;
   }
   .a-arrival-head {
     margin: 5px 0 0;

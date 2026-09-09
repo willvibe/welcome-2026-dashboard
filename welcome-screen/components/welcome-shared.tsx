@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode, type Ref } from 'react';
 import {
   Cake,
   GraduationCap,
@@ -19,6 +19,38 @@ export const shortClass = (name: string) =>
     .replace('2026级', '')
     .replace('人工智能技术应用', '人工智能')
     .replace('金融科技应用', '金融科技');
+
+// Full-screen stage for the PhotoCard: one fixed 1920×1080 (16:9) design
+// canvas on every device — desktop and phone alike. The canvas is scaled
+// to fit (contain) and centered, so what you see — and the PNG you
+// download (3840×2160) — is identical everywhere. No responsive layout.
+export function CardStage({
+  children,
+  stageRef,
+}: {
+  children: ReactNode;
+  stageRef?: Ref<HTMLDivElement>;
+}) {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const fit = () =>
+      setScale(
+        Math.min(window.innerWidth / 1920, window.innerHeight / 1080),
+      );
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  return (
+    <div
+      ref={stageRef}
+      className="card-stage"
+      style={{ '--card-scale': scale } as CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
 
 type Tile = {
   icon: typeof Users;
@@ -98,6 +130,11 @@ export function PhotoCard({
     <div className="photo-mode">
       <div className="photo-orbit orbit-one" />
       <div className="photo-orbit orbit-two" />
+      <img
+        className="photo-logo"
+        src="/college-logo.png?v=2"
+        alt="数智科技产业学院"
+      />
       {onClose && (
         <button
           className="photo-close icon-btn"
@@ -162,7 +199,7 @@ export function PhotoCard({
         <p>{card?.message || '…'}</p>
       </blockquote>
       <div className="photo-bottom">
-        <span>我的大学 · 正式启程</span>
+        <span>我的大学第一刻</span>
         <span>
           {new Date(student.checkedInAt).toLocaleDateString('zh-CN')} · WELCOME
           2026

@@ -57,7 +57,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from '@/components/ui/pagination';
-import { PhotoCard, shortClass } from '@/components/welcome-shared';
+import { CardStage, PhotoCard, shortClass } from '@/components/welcome-shared';
 import type { Arrival, Stats, Student } from '@/lib/types';
 
 async function api(
@@ -393,7 +393,7 @@ export default function TeacherDesk() {
     try {
       await api('/photo', 'POST', { studentId: id });
       setMessage(
-        id ? '合影卡已推送到大屏，展示 2 分钟后自动返回' : '大屏已返回数据总览',
+        id ? '「大学第一刻」已推送到大屏，展示 2 分钟后自动返回' : '大屏已返回数据总览',
       );
     } catch (e) {
       setError((e as Error).message);
@@ -478,6 +478,7 @@ export default function TeacherDesk() {
   if (checking)
     return (
       <main className="admin-loading">
+        <img className="corner-logo" src="/college-logo.png?v=2" alt="数智科技产业学院" />
         <LoaderCircle className="spin" />
         正在连接教师工作台…
       </main>
@@ -485,6 +486,7 @@ export default function TeacherDesk() {
   if (!user)
     return (
       <main className="login-page">
+        <img className="corner-logo" src="/college-logo.png?v=2" alt="数智科技产业学院" />
         <a href="/" className="back-link">
           <ArrowLeft size={16} />
           返回迎新大屏
@@ -544,10 +546,8 @@ export default function TeacherDesk() {
     <main className="admin-page">
       <header className="admin-header">
         <a href="/" className="admin-brand">
-          <GraduationCap />
-          <span>
-            数智科技产业学院<b>教师工作台</b>
-          </span>
+          <img src="/college-logo.png?v=2" alt="数智科技产业学院" />
+          <b>教师工作台</b>
         </a>
         <div>
           <span className={`live ${online ? '' : 'offline'}`}>
@@ -855,7 +855,7 @@ export default function TeacherDesk() {
                               onClick={() => setPhoto(s as Arrival)}
                             >
                               <Camera size={15} />
-                              合影卡
+                              大学第一刻
                             </button>
                             <button
                               className="icon-btn"
@@ -1113,7 +1113,9 @@ export default function TeacherDesk() {
       </Dialog>
       {photo && (
         <>
-          <PhotoCard student={photo} onClose={() => setPhoto(null)} />
+          <CardStage>
+            <PhotoCard student={photo} onClose={() => setPhoto(null)} />
+          </CardStage>
           <div className="photo-teacher-actions">
             <button
               className="solid-btn"

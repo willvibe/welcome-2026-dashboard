@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise';
-import { readFile, appendFile } from 'node:fs/promises';
+import { readFile, appendFile, access } from 'node:fs/promises';
 import { randomBytes, scryptSync } from 'node:crypto';
 import { connection, database, pool } from './db.mjs';
 import { importRegions } from './geography.mjs';
@@ -158,7 +158,13 @@ try {
 } finally {
   db.release();
 }
-await importRegions();
+// Region import needs the private data/student-regions.json (git-ignored).
+// Skip it when the file is absent so a fresh clone can still initialize.
+if (await access(new URL('../data/student-regions.json', import.meta.url)).then(() => true, () => false)) {
+  await importRegions();
+} else {
+  console.log('未找到 data/student-regions.json，跳过地域导入');
+}
 // Teacher accounts: admin follows .env; one generated account per major is
 // created once and printed here (also appended to data/teacher-accounts.txt).
 const hash = (password, salt) =>

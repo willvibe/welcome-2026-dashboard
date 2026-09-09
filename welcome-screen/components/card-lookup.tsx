@@ -9,7 +9,7 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react';
-import { PhotoCard } from '@/components/welcome-shared';
+import { CardStage, PhotoCard } from '@/components/welcome-shared';
 import type { Arrival } from '@/lib/types';
 
 // Students look up their own commemorative card by roster id (e.g. 01-001)
@@ -54,12 +54,21 @@ export default function CardLookup() {
       const target =
         (shot.current.querySelector('.photo-mode') as HTMLElement | null) ??
         shot.current;
-      // Capture options give a clean, borderless full shot: hide the layer's
-      // scrollbars and drop the oversized orbit rings that read as borders.
+      // Capture options give a clean, borderless full shot: render the clone
+      // at its natural 1920×1080 size. The canvas is centered on screen via
+      // absolute + left/top 50%, so the clone must drop that positioning
+      // (and the fit-to-screen scale) or the shot comes out shifted. Also
+      // hide the oversized orbit rings that read as borders.
       const capture = {
         pixelRatio: 2,
         backgroundColor: '#061525',
-        style: { overflow: 'hidden' },
+        style: {
+          overflow: 'hidden',
+          transform: 'none',
+          position: 'static',
+          left: '0',
+          top: '0',
+        },
         filter: (node: HTMLElement) =>
           !(node.classList && node.classList.contains('photo-orbit')),
       };
@@ -72,7 +81,7 @@ export default function CardLookup() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `2026迎新合影卡_${student.name}.png`;
+      link.download = `2026大学第一刻_${student.name}.png`;
       link.click();
       // Free the screenshot from browser memory once the download is done.
       setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -84,6 +93,11 @@ export default function CardLookup() {
   }
   return (
     <main className="card-lookup-page">
+      <img
+        className="corner-logo"
+        src="/college-logo.png?v=2"
+        alt="数智科技产业学院"
+      />
       <a href="/" className="back-link">
         <ArrowLeft size={16} />
         返回迎新大屏
@@ -94,8 +108,8 @@ export default function CardLookup() {
             <GraduationCap size={26} />
           </div>
           <div>
-            <h1>我的迎新合影卡</h1>
-            <p className="card-lookup-sub">MY WELCOME CARD · 查看并保存留念</p>
+            <h1>我的大学第一刻</h1>
+            <p className="card-lookup-sub">MY FIRST MOMENT · 查看并保存留念</p>
           </div>
         </div>
         <label>
@@ -133,15 +147,15 @@ export default function CardLookup() {
           ) : (
             <Sparkles size={17} />
           )}
-          查看我的合影卡
+          查看我的大学第一刻
         </button>
         <small>数智科技产业学院 · 2026 级新生报到</small>
       </form>
       {student && (
         <>
-          <div ref={shot}>
+          <CardStage stageRef={shot}>
             <PhotoCard student={student} />
-          </div>
+          </CardStage>
           <div className="card-save-actions">
             <button className="solid-btn" disabled={saving} onClick={download}>
               {saving ? (
@@ -149,7 +163,7 @@ export default function CardLookup() {
               ) : (
                 <Download size={17} />
               )}
-              保存合影卡图片
+              保存大学第一刻图片
             </button>
             <button className="outline-btn" onClick={() => setStudent(null)}>
               再查一位

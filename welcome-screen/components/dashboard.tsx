@@ -28,7 +28,7 @@ import {
   WordCloud,
   ZodiacChart,
 } from './arrival-charts';
-import { PhotoCard, shortClass } from './welcome-shared';
+import { CardStage, PhotoCard, shortClass } from './welcome-shared';
 import { ArrivalFeed } from './arrival-feed';
 import { DistrictList } from './school-list';
 import type { Arrival, Stats } from '@/lib/types';
@@ -173,9 +173,8 @@ export default function Dashboard() {
       <header className="a-header">
         <a className="a-brand" href="/">
           <span className="a-brand-symbol">
-            <img src="/college-logo.png" alt="数智科技产业学院标志" />
+            <img src="/college-logo.png?v=2" alt="数智科技产业学院" />
           </span>
-          <span className="a-brand-name">数智科技产业学院<small>COLLEGE OF DIGITAL INTELLIGENCE</small></span>
         </a>
         <div className="a-title">
           <span className="a-title-frame" aria-hidden="true" />
@@ -433,18 +432,28 @@ export default function Dashboard() {
               }
               className="a-arrivals-panel"
             >
-              <div className="a-arrival-head">
-                <span>姓名</span>
-                <span>班级</span>
-                <span>报到顺序</span>
-                <span>来自</span>
+              <div className="a-arrivals-layout">
+                <div className="a-arrivals-main">
+                  <div className="a-arrival-head">
+                    <span>姓名</span>
+                    <span>班级</span>
+                    <span>报到顺序</span>
+                    <span>来自</span>
+                  </div>
+                  <ArrivalFeed
+                    recent={stats.recent}
+                    checkedIn={stats.checkedIn}
+                    live={live}
+                    onSelect={setPhoto}
+                  />
+                </div>
+                <div className="a-arrival-qr">
+                  <div className="a-qr-img">
+                    <img src="/qr-card.png?v=2" alt="扫码查看我的大学第一刻" />
+                  </div>
+                  <span>扫码查看大学第一刻</span>
+                </div>
               </div>
-              <ArrivalFeed
-                recent={stats.recent}
-                checkedIn={stats.checkedIn}
-                live={live}
-                onSelect={setPhoto}
-              />
             </Panel>
           </div>
         </section>
@@ -530,8 +539,8 @@ export default function Dashboard() {
           </button>
           <a
             href="/card"
-            aria-label="我的合影卡"
-            title="我的合影卡 · 学生查询"
+            aria-label="我的大学第一刻"
+            title="我的大学第一刻 · 学生查询"
           >
             <Camera size={14} />
           </a>
@@ -584,19 +593,21 @@ export default function Dashboard() {
               名字尾字前十名每 3 秒轮播；兴趣人数按已填写兴趣的学生比例推算至当前在册总人数，仅为估算。每人每个标签、每个雷达类别只计一次，多选兴趣人数之和可超过总人数。报到数据每 3 秒刷新，教师操作即时同步。
             </li>
             <li>
-              点击最近报到学生可打开专属合影卡。报到序号首次确认时分配，撤销重报仍保留。
+              点击最近报到学生可打开专属「大学第一刻」。报到序号首次确认时分配，撤销重报仍保留。
             </li>
           </ul>
         </DialogContent>
       </Dialog>
       {activePhoto && (
-        <PhotoCard
-          student={activePhoto}
-          onClose={() => {
-            setPhoto(null);
-            if (stats.photo) setDismissed(remoteKey);
-          }}
-        />
+        <CardStage>
+          <PhotoCard
+            student={activePhoto}
+            onClose={() => {
+              setPhoto(null);
+              if (stats.photo) setDismissed(remoteKey);
+            }}
+          />
+        </CardStage>
       )}
     </main>
   );

@@ -80,7 +80,7 @@ export function ArrivalFeed({
         className="a-arrivals-list"
         ref={listRef}
         tabIndex={0}
-        aria-label="报到记录，默认显示最近5位，向下滚动查看历史并打开合影卡"
+        aria-label="报到记录，默认显示最近5位，向下滚动查看历史并打开大学第一刻"
         onScroll={(event) => setPast(event.currentTarget.scrollTop > 2)}
       >
         {arrivals.length ? (
@@ -89,7 +89,7 @@ export function ArrivalFeed({
               key={student.id}
               data-arrival-id={student.id}
               className="a-arrival-entry"
-              title={`${new Date(student.checkedInAt).toLocaleString('zh-CN', { hour12: false })} · 查看${student.name}的第${student.ordinal}位报到合影卡`}
+              title={`${new Date(student.checkedInAt).toLocaleString('zh-CN', { hour12: false })} · 查看${student.name}的第${student.ordinal}位报到「大学第一刻」`}
               onClick={() => onSelect(student)}
             >
               <span className="a-ar-name">{student.name}</span>

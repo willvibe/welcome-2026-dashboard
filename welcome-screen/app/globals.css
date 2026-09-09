@@ -428,10 +428,119 @@ svg {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* CardStage (shared by /card, dashboard and teacher desk): one fixed
+   1920×1080 (16:9) design canvas on every device — phone included, no
+   responsive card layout. The canvas scales to fit (contain) and stays
+   centered, so screens and downloaded PNGs (3840×2160) are identical. */
+.card-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: #061525;
+  overflow: hidden;
+}
+.card-stage .photo-mode {
+  position: absolute;
+  /* Reset the base photo-mode `inset: 0` before pinning to the middle. */
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: 1920px;
+  height: 1080px;
+  flex: none;
+  overflow: hidden;
+  padding: 48px 80px 120px;
+  /* Absolute + percentage translate centers reliably even when the canvas
+     overflows the stage (grid/flex centering falls back to start). */
+  transform: translate(-50%, -50%) scale(var(--card-scale, 1));
+}
+.photo-logo {
+  position: absolute;
+  top: 40px;
+  left: 60px;
+  height: 56px;
+  width: auto;
+  filter: saturate(1.12);
+}
+/* Design-space sizes: fixed px (no viewport clamps, no breakpoint tweaks)
+   so the 16:9 card renders identically on every screen. These scoped rules
+   also outrank the legacy ≤760px photo-mode tweaks. */
+.card-stage .photo-college {
+  font-size: 26px;
+  letter-spacing: 6px;
+  margin-bottom: 36px;
+}
+.card-stage .photo-mode .eyebrow {
+  font-size: 18px;
+}
+.card-stage .photo-mode h1 {
+  font-size: 88px;
+  letter-spacing: 5px;
+  margin: 18px 0 8px;
+}
+.card-stage .photo-number {
+  flex-direction: row;
+  gap: 34px;
+  margin: 20px 0;
+}
+.card-stage .photo-number strong {
+  font-size: 175px;
+  line-height: 1.05;
+}
+.card-stage .photo-number > span {
+  font-size: 30px;
+}
+.card-stage .photo-info {
+  font-size: 26px;
+  padding: 14px 34px;
+  flex-wrap: nowrap;
+}
+.card-stage .photo-fate {
+  width: min(1180px, 88%);
+}
+/* Always the 3×2 design grid — outranks the legacy ≤760px two-column tweak. */
+.card-stage .photo-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.card-stage .photo-fate > header {
+  font-size: 16px;
+}
+.card-stage .photo-stats svg {
+  width: 28px;
+  height: 28px;
+}
+.card-stage .photo-stats b {
+  font-size: 34px;
+}
+.card-stage .photo-stats b small {
+  font-size: 13px;
+}
+.card-stage .photo-stats span {
+  font-size: 16px;
+}
+.card-stage .photo-stats p {
+  font-size: 14px;
+}
+.card-stage .photo-blessing svg {
+  width: 24px;
+  height: 24px;
+}
+.card-stage .photo-blessing p {
+  font-size: 28px;
+  line-height: 1.6;
+}
+.card-stage .photo-bottom {
+  position: absolute;
+  bottom: 3%;
+  flex-direction: row;
+  gap: 0;
+  font-size: 17px;
+}
 .admin-page {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 10% 0, #10314b77, transparent 55%), #071522;
+    radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
+    radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
 }
 .admin-header {
   height: 82px;
@@ -447,14 +556,10 @@ svg {
   align-items: center;
   gap: 20px;
 }
-.admin-brand > svg {
-  color: #6bdff4;
-  width: 32px;
-  height: 32px;
-}
-.admin-brand > span {
-  font-size: 18px;
-  font-weight: 500;
+.admin-brand > img {
+  height: 42px;
+  width: auto;
+  filter: saturate(1.12);
 }
 .admin-brand b {
   font-size: 13px;
@@ -954,16 +1059,26 @@ svg {
 .login-page {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 25% 15%, #0e3958 0, transparent 55%),
-    radial-gradient(ellipse at 95% 80%, #1c345233, transparent 60%), #071623;
+    radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
+    radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 80px 20px;
 }
+/* Full college logo (badge + name) pinned to the top-left of every page. */
+.corner-logo {
+  position: absolute;
+  top: 26px;
+  left: 30px;
+  height: 46px;
+  width: auto;
+  filter: saturate(1.12);
+  z-index: 5;
+}
 .back-link {
   position: absolute;
-  top: 30px;
+  top: 92px;
   left: 35px;
   color: #84afc5;
   font-size: 13px;
@@ -983,12 +1098,13 @@ svg {
 .card-lookup-page {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 25% 15%, #0e3958 0, transparent 55%),
-    radial-gradient(ellipse at 95% 80%, #1c345233, transparent 60%), #071623;
+    radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
+    radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
+  /* Top padding clears the corner logo + back-link. */
+  padding: 112px 20px 72px;
 }
 .card-lookup-box {
   width: 440px;
@@ -1049,6 +1165,10 @@ svg {
 }
 .card-id-input input {
   flex: 1;
+  /* Inputs have an intrinsic min-content width (size attr × letter-spaced
+     font) wider than the card on phones — allow shrinking to fit. */
+  min-width: 0;
+  width: 100%;
   font-size: 18px;
   letter-spacing: 2px;
   padding: 13px 14px 13px 40px;
@@ -1063,9 +1183,21 @@ svg {
   gap: 12px;
 }
 @media (max-width: 760px) {
+  .card-lookup-page {
+    /* Clear the corner logo + back-link stacked in the top-left corner. */
+    padding: 122px 14px 44px;
+    align-items: stretch;
+  }
   .card-lookup-box {
-    padding: 28px;
+    padding: 24px 18px;
     width: 100%;
+  }
+  .card-lookup-help i {
+    white-space: normal;
+  }
+  .card-id-input input {
+    font-size: 16px;
+    letter-spacing: 1px;
   }
   .card-save-actions {
     bottom: 16px;
@@ -1134,6 +1266,9 @@ svg {
   align-items: center;
   gap: 12px;
   color: #82bdd4;
+  background:
+    radial-gradient(ellipse at 25% 15%, #125273 0, transparent 40%),
+    radial-gradient(ellipse at 85% 90%, #253d6b 0, transparent 45%), #061525;
 }
 .spin {
   animation: spin 1s linear infinite;
@@ -1182,14 +1317,24 @@ svg {
   .admin-header {
     height: 65px;
   }
-  .admin-brand > span {
-    font-size: 14px;
-  }
   .admin-brand {
     gap: 10px;
   }
-  .admin-brand > svg {
-    width: 24px;
+  .admin-brand > img {
+    height: 30px;
+  }
+  .admin-brand b {
+    margin-left: 10px;
+    padding-left: 10px;
+  }
+  .corner-logo {
+    top: 14px;
+    left: 16px;
+    height: 32px;
+  }
+  .back-link {
+    top: 58px;
+    left: 16px;
   }
   .admin-header > div {
     gap: 8px;
