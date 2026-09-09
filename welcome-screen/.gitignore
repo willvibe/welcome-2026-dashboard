@@ -32,6 +32,7 @@ yarn-error.log*
 /data/
 /logs/
 /backups/
+/scripts/backups/
 
 # deployment and generated files
 .vercel

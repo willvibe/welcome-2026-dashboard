@@ -306,13 +306,15 @@ test(
         method: 'POST',
         body: { ids: [ids[0]], status: 'checked_in' },
       });
-      assert.equal(redone.data.students[0].ordinal, ordinals[0]);
+      // Undo clears the ordinal, so a re-check draws a fresh number instead
+      // of resurrecting the old one.
+      assert.equal(redone.data.students[0].ordinal, Math.max(...ordinals) + 1);
       const refreshedHistory = (
         await request('/arrivals', { authenticated: false })
       ).data.arrivals;
       assert.equal(refreshedHistory.length, 8);
       assert.equal(refreshedHistory[0].id, ids[0]);
-      assert.equal(refreshedHistory[0].ordinal, ordinals[0]);
+      assert.equal(refreshedHistory[0].ordinal, Math.max(...ordinals) + 1);
       await request('/attendance', {
         method: 'POST',
         body: { ids: [ids[0]], status: 'pending' },
