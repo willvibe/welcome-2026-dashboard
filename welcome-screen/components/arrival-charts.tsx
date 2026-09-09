@@ -80,7 +80,7 @@ export function ProgressTable({
         {groups.map((g, i) => (
           <TableRow key={g.name}>
             <TableCell>
-              <span className="a-row-index">0{i + 1}</span>
+              <span className="a-row-index">{String(i + 1).padStart(2, '0')}</span>
               <span title={g.name}>{shortClass(g.name)}</span>
             </TableCell>
             <TableCell>{g.total}</TableCell>
@@ -314,6 +314,9 @@ export function WordCloud({
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
+    // Roll a fresh silhouette per page load (after hydration, so SSR and
+    // client markup stay identical) — every refresh opens on a new shape.
+    setSeed(Math.floor(Math.random() * 1e6));
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setScattered(false);
       return;

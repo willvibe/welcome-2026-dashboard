@@ -41,6 +41,7 @@ export type CardDetail = {
 };
 export type Student = {
   id: string;
+  studentNo?: string | null;
   province: string | null;
   geographySource?: string;
   name: string;

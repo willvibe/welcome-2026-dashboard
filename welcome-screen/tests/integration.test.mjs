@@ -104,17 +104,25 @@ test(
       const initialStats = (await request('/stats')).data;
       assert.equal(initialStats.total, 450);
       assert.equal(initialStats.checkedIn, 0);
-      assert.equal(initialStats.quality.cityKnown, 176);
-      assert.equal(initialStats.quality.cityMissing, 274);
+      // Geography and gender splits vary with the imported roster, so expect
+      // them to mirror the test database instead of one fixed dataset.
+      const [[geo]] = await db.query(
+        "SELECT COUNT(*) AS known FROM students WHERE city IS NOT NULL AND city <> ''",
+      );
+      assert.equal(initialStats.quality.cityKnown, geo.known);
+      assert.equal(initialStats.quality.cityMissing, 450 - geo.known);
       assert.equal(initialStats.majors.length, 4);
       assert.equal(initialStats.classes.length, 11);
       assert.equal(initialStats.lastHour, 0);
       assert.equal(initialStats.portraits.length, 5);
       assert.equal(initialStats.portraits[0].total, 450);
+      const [[genders]] = await db.query(
+        "SELECT SUM(gender='男') AS male, SUM(gender='女') AS female, SUM(gender IS NULL OR gender='') AS unknown FROM students",
+      );
       assert.deepEqual(initialStats.portraits[0].gender, {
-        male: 137,
-        female: 313,
-        unknown: 0,
+        male: Number(genders.male),
+        female: Number(genders.female),
+        unknown: Number(genders.unknown),
       });
       for (const portrait of initialStats.portraits) {
         assert.equal(
@@ -142,7 +150,7 @@ test(
       );
       assert.equal(
         initialStats.cities.reduce((n, c) => n + c.total, 0),
-        176,
+        geo.known,
       );
       assert.ok(!JSON.stringify(initialStats).includes('"birthday":'));
       assert.ok(!JSON.stringify(initialStats).includes('"hobbies_raw":'));
@@ -334,15 +342,19 @@ test(
       assert.equal((await request('/stats')).data.photo.id, ids[0]);
       await request('/photo', { method: 'POST', body: { studentId: null } });
       assert.equal((await request('/stats')).data.photo, null);
+      // Exercise the geography PATCH on a student without a city when the
+      // roster has one, otherwise on any student — the expected cityKnown
+      // count shifts only when the target lacked a city before the edit.
       const unknown = all.find((s) => !s.city);
-      assert.ok(unknown);
-      const profile = await request('/students/' + unknown.id + '/profile', {
+      const target = unknown || all[0];
+      const expectedKnown = geo.known + (unknown ? 1 : 0);
+      const profile = await request('/students/' + target.id + '/profile', {
         method: 'PATCH',
         body: { city: '济南市', district: '测试区', school: '测试生源学校' },
       });
       assert.equal(profile.status, 200);
       const updated = (await request('/stats')).data;
-      assert.equal(updated.quality.cityKnown, 177);
+      assert.equal(updated.quality.cityKnown, expectedKnown);
       assert.ok(
         updated.cities
           .find((c) => c.name === '济南市')
@@ -355,7 +367,7 @@ test(
       });
       assert.equal(rerun.status, 0, rerun.stderr);
       assert.equal((await request('/stats')).data.checkedIn, 8);
-      assert.equal((await request('/stats')).data.quality.cityKnown, 177);
+      assert.equal((await request('/stats')).data.quality.cityKnown, expectedKnown);
       const audit = (await request('/audit')).data.logs;
       assert.ok(audit.some((l) => l.action === 'undo_check_in'));
       assert.ok(audit.some((l) => l.action === 'update_profile'));

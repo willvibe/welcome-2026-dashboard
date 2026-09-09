@@ -5,6 +5,17 @@ export const iso = (value) =>
   value ? new Date(value.replace(' ', 'T') + 'Z').toISOString() : null;
 export const sqlTime = () =>
   new Date().toISOString().slice(0, 23).replace('T', ' ');
+// Times are stored as UTC strings; teachers read Beijing time, so shift +8
+// for Excel exports, filenames and the audit log instead of the raw UTC.
+export const bjTime = (value) => {
+  if (!value) return '';
+  const shifted = new Date(
+    new Date(value.replace(' ', 'T') + 'Z').getTime() + 8 * 3600e3,
+  );
+  return Number.isNaN(shifted.getTime())
+    ? String(value).slice(0, 16)
+    : shifted.toISOString().slice(0, 16).replace('T', ' ');
+};
 export const publicStudent = (s) => ({
   id: s.id,
   name: s.name,
@@ -16,6 +27,7 @@ export const publicStudent = (s) => ({
 });
 export const teacherStudent = (s) => ({
   ...publicStudent(s),
+  studentNo: s.student_no ?? null,
   gender: s.gender,
   province: s.province,
   geographySource: s.geography_source,

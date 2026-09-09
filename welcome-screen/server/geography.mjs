@@ -2,6 +2,15 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { pool, database } from './db.mjs';
 
+// Fresh databases created by the base CREATE TABLE lack the geography
+// enrichment columns; the profile PATCH and stats read them, so make sure
+// they exist even when the private region data file is absent.
+export async function ensureGeographyColumns() {
+  for (const [name, type] of Object.entries({province:'VARCHAR(80)', district_code:'CHAR(6)', address_code:'CHAR(6)', geography_source:'VARCHAR(30)'})) {
+    const [columns] = await pool.execute('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?', [database, 'students', name]);
+    if (!columns.length) await pool.query(`ALTER TABLE students ADD COLUMN ${name} ${type}`);
+  }
+}
 export async function importRegions() {
   const regions = JSON.parse(await readFile(new URL('../data/student-regions.json', import.meta.url), 'utf8'));
   const report = JSON.parse(await readFile(new URL('../data/region-import-report.json', import.meta.url), 'utf8'));
@@ -23,10 +32,7 @@ export async function importRegions() {
   const version = createHash('sha256').update(JSON.stringify(merged)).digest('hex');
   const [rows] = await pool.query('SELECT id,name,major,class_name,city,district,status,ordinal,checked_in_at FROM students ORDER BY id');
   if (merged.length !== 450 || rows.length !== merged.length || merged.some(r => !rows.some(s => s.id === r.id && s.name === r.name && s.major === r.major && s.class_name === r.className))) throw Error('地域导入与现有名册不一致，未修改数据');
-  for (const [name, type] of Object.entries({province:'VARCHAR(80)', district_code:'CHAR(6)', address_code:'CHAR(6)', geography_source:'VARCHAR(30)'})) {
-    const [columns] = await pool.execute('SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?', [database, 'students', name]);
-    if (!columns.length) await pool.query(`ALTER TABLE students ADD COLUMN ${name} ${type}`);
-  }
+  await ensureGeographyColumns();
   const [[previous]] = await pool.query("SELECT value FROM settings WHERE name='identity_geography'");
   if (previous && JSON.parse(typeof previous.value === 'string' ? previous.value : JSON.stringify(previous.value)).version === version) return { ...report, applied: false };
   const db = await pool.getConnection();

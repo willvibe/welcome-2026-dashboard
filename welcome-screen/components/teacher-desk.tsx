@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import divisions from '@/lib/china-regions.json';
 import {
   ArrowLeft,
@@ -272,10 +272,16 @@ export default function TeacherDesk() {
   const remoteRevision = stats
     ? `${stats.checkedIn}:${stats.recent.map((s) => s.id + s.checkedInAt).join(',')}`
     : '';
+  // Hold the latest load in a ref: this effect must fire only when the server
+  // revision actually changes. Depending on `load` directly re-fires it on
+  // every keystroke (load's identity changes with the filters), bypassing the
+  // 200ms debounce above and doubling every search request.
+  const loadRef = useRef(load);
+  loadRef.current = load;
   useEffect(() => {
     if (!user || !remoteRevision) return;
-    void load();
-  }, [remoteRevision, user, load]);
+    void loadRef.current();
+  }, [remoteRevision, user]);
   useEffect(() => {
     setPage(0);
   }, [query, major, className, status]);
@@ -660,8 +666,8 @@ export default function TeacherDesk() {
               <label className="search-input">
                 <Search size={18} />
                 <input
-                  aria-label="搜索姓名、编号或生源学校"
-                  placeholder="搜索姓名、编号或生源学校"
+                  aria-label="搜索姓名、编号、学号或生源学校"
+                  placeholder="搜索姓名、编号、学号或生源学校"
                   maxLength={80}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -791,7 +797,7 @@ export default function TeacherDesk() {
                     </TableCell>
                     <TableCell>
                       <strong>{s.name}</strong>
-                      <small>{s.id}</small>
+                      <small>{s.studentNo || s.id}</small>
                     </TableCell>
                     <TableCell>
                       <span>{s.major}</span>

@@ -15,6 +15,7 @@ import {
   setAttendance,
   teacherStudent,
   sqlTime,
+  bjTime,
   parseJSON,
 } from './service.mjs';
 
@@ -107,34 +108,35 @@ app.get('/api/health', async (req, res) => {
   res.json({ ok: true, database: 'mysql' });
 });
 app.post('/api/login', async (req, res) => {
-  const ip = req.socket.remoteAddress;
-  const old = attempts.get(ip);
+  const { username, password } = req.body || {};
+  // The API sits behind the same-origin proxy where every caller shares one
+  // remote IP, so the limiter keys on IP + account: a lockout only ever
+  // blocks that one account instead of every teacher at once.
+  const key = `${req.socket.remoteAddress}|${typeof username === 'string' ? username.slice(0, 40) : ''}`;
+  const old = attempts.get(key);
   const attempt =
     old && old.until > Date.now()
       ? old
       : { count: 0, until: Date.now() + 60000 };
   if (attempt.count >= 10)
     return res.status(429).json({ error: '尝试次数过多，请一分钟后重试' });
-  const { username, password } = req.body || {};
   const [[teacher]] = await pool
     .execute('SELECT username,pwd,salt,major FROM teachers WHERE username=?', [
       typeof username === 'string' ? username.slice(0, 40) : '',
     ])
     .catch(() => [[]]);
-  if (
-    typeof password !== 'string' ||
-    password.length > 200 ||
-    !teacher ||
-    !timingSafeEqual(
-      scryptSync(password, Buffer.from(teacher.salt, 'hex'), 64),
-      Buffer.from(teacher.pwd, 'hex'),
-    )
-  ) {
+  // Always run exactly one scrypt pass — even for unknown accounts — so
+  // response timing cannot reveal which usernames exist.
+  const candidate =
+    typeof password === 'string' && password.length <= 200
+      ? scryptSync(password, Buffer.from(teacher?.salt || '00', 'hex'), 64)
+      : Buffer.alloc(64);
+  if (!teacher || !timingSafeEqual(candidate, Buffer.from(teacher.pwd, 'hex'))) {
     attempt.count++;
-    attempts.set(ip, attempt);
+    attempts.set(key, attempt);
     return res.status(401).json({ error: '账号或密码不正确' });
   }
-  attempts.delete(ip);
+  attempts.delete(key);
   const token = randomBytes(32).toString('hex');
   await pool.execute(
     `INSERT INTO sessions (token_hash, username, major, expires_ms) VALUES (?,?,?,?)
@@ -258,9 +260,9 @@ app.get('/api/students', auth, async (req, res) => {
       values.push(value);
     }
   if (typeof q === 'string' && q.trim()) {
-    conditions.push('(name LIKE ? OR id LIKE ? OR school LIKE ?)');
+    conditions.push('(name LIKE ? OR id LIKE ? OR school LIKE ? OR student_no LIKE ?)');
     const term = '%' + q.trim().replace(/[\\%_]/g, '\\$&') + '%';
-    values.push(term, term, term);
+    values.push(term, term, term, term);
   }
   const [rows] = await pool.execute(
     `SELECT * FROM students ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''} ORDER BY id`,
@@ -289,9 +291,9 @@ app.get('/api/export', auth, async (req, res) => {
       values.push(value);
     }
   if (typeof q === 'string' && q.trim()) {
-    conditions.push('(name LIKE ? OR id LIKE ? OR school LIKE ?)');
+    conditions.push('(name LIKE ? OR id LIKE ? OR school LIKE ? OR student_no LIKE ?)');
     const term = '%' + q.trim().replace(/[\\%_]/g, '\\$&') + '%';
-    values.push(term, term, term);
+    values.push(term, term, term, term);
   }
   const [rows] = await pool.execute(
     `SELECT * FROM students ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''} ORDER BY id`,
@@ -363,7 +365,7 @@ app.get('/api/export', auth, async (req, res) => {
       parseJSON(s.hobbies).join('、'),
       STATUS_TEXT[s.status] || s.status,
       s.ordinal ?? '',
-      s.checked_in_at ? String(s.checked_in_at).slice(0, 16) : '',
+      s.checked_in_at ? bjTime(s.checked_in_at) : '',
     ]);
     const statusCell = row.getCell(13);
     const fill = STATUS_FILL[s.status];
@@ -375,7 +377,7 @@ app.get('/api/export', auth, async (req, res) => {
   const parts = [req.teacherMajor || (typeof major === 'string' && major) || '全院'];
   if (typeof className === 'string' && className) parts.push(className);
   if (typeof status === 'string' && STATUS_TEXT[status]) parts.push(STATUS_TEXT[status]);
-  const stamp = sqlTime().slice(0, 10).replace(/-/g, '');
+  const stamp = bjTime(sqlTime()).slice(0, 10).replace(/-/g, '');
   const filename = `2026级新生报到详情_${parts.join('_')}_${stamp}.xlsx`;
   const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
   res.set({
@@ -463,11 +465,16 @@ app.post('/api/photo', auth, async (req, res) => {
   if (studentId !== null && typeof studentId !== 'string')
     return res.status(400).json({ error: '请选择已报到学生' });
   if (studentId) {
-    const [[s]] = await pool.execute('SELECT status FROM students WHERE id=?', [
-      studentId,
-    ]);
+    const [[s]] = await pool.execute(
+      'SELECT status, major FROM students WHERE id=?',
+      [studentId],
+    );
     if (!s || s.status !== 'checked_in')
       return res.status(409).json({ error: '该学生尚未报到，请先确认报到' });
+    // Same scoping rule as attendance/profile: major teachers can only
+    // feature students from their own major.
+    if (req.teacherMajor && s.major !== req.teacherMajor)
+      return res.status(403).json({ error: '只能推送本专业的学生' });
   }
   await pool.execute("UPDATE settings SET value=? WHERE name='photo'", [
     JSON.stringify(
@@ -480,11 +487,12 @@ app.post('/api/photo', auth, async (req, res) => {
 app.get('/api/audit', auth, async (req, res) => {
   const [logs] = req.teacherMajor
     ? await pool.execute(
-        'SELECT a.id,a.action,a.actor,a.created_at,a.details,s.name,s.class_name FROM audit_log a LEFT JOIN students s ON s.id=a.student_id WHERE s.major=? ORDER BY a.id DESC LIMIT 100',
+        // created_at is stored in UTC; hand the desk Beijing time.
+        'SELECT a.id,a.action,a.actor,DATE_ADD(a.created_at, INTERVAL 8 HOUR) AS created_at,a.details,s.name,s.class_name FROM audit_log a LEFT JOIN students s ON s.id=a.student_id WHERE s.major=? ORDER BY a.id DESC LIMIT 100',
         [req.teacherMajor],
       )
     : await pool.query(
-        'SELECT a.id,a.action,a.actor,a.created_at,a.details,s.name,s.class_name FROM audit_log a LEFT JOIN students s ON s.id=a.student_id ORDER BY a.id DESC LIMIT 100',
+        'SELECT a.id,a.action,a.actor,DATE_ADD(a.created_at, INTERVAL 8 HOUR) AS created_at,a.details,s.name,s.class_name FROM audit_log a LEFT JOIN students s ON s.id=a.student_id ORDER BY a.id DESC LIMIT 100',
       );
   res.json({ logs });
 });

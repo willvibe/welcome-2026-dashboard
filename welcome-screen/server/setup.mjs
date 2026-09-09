@@ -2,7 +2,7 @@ import mysql from 'mysql2/promise';
 import { readFile, appendFile, access } from 'node:fs/promises';
 import { randomBytes, scryptSync } from 'node:crypto';
 import { connection, database, pool } from './db.mjs';
-import { importRegions } from './geography.mjs';
+import { importRegions, ensureGeographyColumns } from './geography.mjs';
 
 const bootstrap = await mysql.createConnection(connection);
 await bootstrap.query(
@@ -62,33 +62,44 @@ try {
   const sheet = XLSX.read(buf).Sheets.Sheet1;
   const roster = XLSX.utils.sheet_to_json(sheet);
   let matchedNo = 0,
-    matchedCard = 0;
+    matchedCard = 0,
+    rowErrors = 0;
   for (const row of roster) {
     const no = String(row['学号'] ?? '').trim();
     const card = String(row['证件号码'] ?? '').trim().toUpperCase();
     const name = String(row['姓名'] ?? '').trim();
     const cls = String(row['班级'] ?? '').trim();
     if (!name || !cls) continue;
-    if (no) {
-      const [result] = await pool.execute(
-        'UPDATE students SET student_no=? WHERE name=? AND class_name=?',
-        [no, name, cls],
-      );
-      matchedNo += result.affectedRows;
-    }
-    if (/^\d{17}[\dX]$/.test(card)) {
-      const [result] = await pool.execute(
-        'UPDATE students SET id_card=? WHERE name=? AND class_name=?',
-        [card, name, cls],
-      );
-      matchedCard += result.affectedRows;
+    // Per-row isolation: one bad row (duplicate student_no, same-name-same-class
+    // multi-hit, …) must not abort the whole import, and the error gets
+    // logged for what it really is instead of a missing-file message.
+    try {
+      if (no) {
+        const [result] = await pool.execute(
+          'UPDATE students SET student_no=? WHERE name=? AND class_name=?',
+          [no, name, cls],
+        );
+        matchedNo += result.affectedRows;
+      }
+      if (/^\d{17}[\dX]$/.test(card)) {
+        const [result] = await pool.execute(
+          'UPDATE students SET id_card=? WHERE name=? AND class_name=?',
+          [card, name, cls],
+        );
+        matchedCard += result.affectedRows;
+      }
+    } catch (e) {
+      rowErrors++;
+      console.warn(`学号/身份证导入跳过一行（${name} / ${cls}）：${e.code || e.message}`);
     }
   }
   console.log(
-    `学号导入：${matchedNo}/${roster.length}，身份证导入：${matchedCard}/${roster.length}`,
+    `学号导入：${matchedNo}/${roster.length}，身份证导入：${matchedCard}/${roster.length}${rowErrors ? `，失败 ${rowErrors} 行` : ''}`,
   );
-} catch {
-  console.log('未找到 学生身份证信息.xlsx，跳过学号/身份证导入');
+} catch (e) {
+  // A missing spreadsheet is expected on fresh clones; anything else is real.
+  if (e.code === 'ENOENT') console.log('未找到 学生身份证信息.xlsx，跳过学号/身份证导入');
+  else console.error('学号/身份证导入失败：', e.code || e.message);
 }
 await pool.execute(
   "INSERT IGNORE INTO counters (name,value) VALUES ('registration',0)",
@@ -160,6 +171,9 @@ try {
 }
 // Region import needs the private data/student-regions.json (git-ignored).
 // Skip it when the file is absent so a fresh clone can still initialize.
+// The geography columns must exist before anything else touches profiles,
+// even on fresh clones without the private region data.
+await ensureGeographyColumns();
 if (await access(new URL('../data/student-regions.json', import.meta.url)).then(() => true, () => false)) {
   await importRegions();
 } else {
